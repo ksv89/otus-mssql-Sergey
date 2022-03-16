@@ -59,7 +59,25 @@ order by DATEPART(yy, inv.InvoiceDate),DATEPART(m, inv.InvoiceDate)
 Продажи смотреть в таблице Sales.Invoices и связанных таблицах.
 */
 
-TODO: напишите здесь свое решение
+select 
+	CASE grouping(DATEPART(yy, inv.InvoiceDate)) 
+    WHEN 1 THEN CAST('TotalAll' as NCHAR(20))
+    ELSE CAST(DATEPART(yy, inv.InvoiceDate) as NCHAR(20))
+	END as YearInv,
+
+	CASE grouping(DATEPART(m, inv.InvoiceDate)) 
+    WHEN 1 THEN CAST('Total' as NCHAR(20))
+    ELSE CAST(DATEPART(m, inv.InvoiceDate) as NCHAR(20))
+	END as MonthInv,
+
+SUM(ordl.UnitPrice) as SUMPrice
+from Sales.Invoices inv with (nolock)
+inner join Sales.OrderLines ordl on ordl.OrderID = inv.OrderID
+group by DATEPART(yy, inv.InvoiceDate), DATEPART(m, inv.InvoiceDate), PackageTypeID
+having 
+SUM(ordl.UnitPrice) > 10000 and 
+PackageTypeID = 9
+order by DATEPART(yy, inv.InvoiceDate),DATEPART(m, inv.InvoiceDate)
 
 /*
 3. Вывести сумму продаж, дату первой продажи
@@ -78,7 +96,13 @@ TODO: напишите здесь свое решение
 Продажи смотреть в таблице Sales.Invoices и связанных таблицах.
 */
 
-TODO: напишите здесь свое решение
+select DATEPART(yy, inv.InvoiceDate) as saleyear, DATEPART(m, inv.InvoiceDate) as salemonth, wst.StockItemName, SUM(ordl.UnitPrice) as SUMPrice, MIN(inv.InvoiceDate) as mindate, COUNT (ordl.StockItemID) as quantity
+from Sales.Invoices inv with (nolock)
+inner join Sales.OrderLines ordl on ordl.OrderID = inv.OrderID
+inner join Warehouse.StockItems wst on wst.StockItemID = ordl.StockItemID
+group by DATEPART(yy, inv.InvoiceDate), DATEPART(m, inv.InvoiceDate), wst.StockItemName
+having COUNT (ordl.StockItemID) < 51
+order by DATEPART(yy, inv.InvoiceDate) , DATEPART(m, inv.InvoiceDate) , COUNT (ordl.StockItemID)
 
 -- ---------------------------------------------------------------------------
 -- Опционально
