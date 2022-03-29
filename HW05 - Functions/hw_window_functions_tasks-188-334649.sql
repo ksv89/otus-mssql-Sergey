@@ -61,7 +61,7 @@ order by inv.InvoiceID
 */
 
 select inv.InvoiceID, cus.CustomerName, inv.InvoiceDate, cust.AmountExcludingTax
-,SUM (cust.AmountExcludingTax) OVER (PARTITION BY YEAR(InvoiceDate),MONTH(InvoiceDate) order by inv.InvoiceID) as CumulativeTotalMonth
+,SUM (cust.AmountExcludingTax) OVER ( order by YEAR(InvoiceDate),MONTH(InvoiceDate),inv.InvoiceID) as CumulativeTotalMonth
 from Sales.Invoices inv with (nolock)
 inner join Sales.Customers cus on cus.CustomerID = inv.CustomerID
 inner join Sales.CustomerTransactions cust on cust.InvoiceID = inv.InvoiceID
@@ -100,14 +100,14 @@ order by yearc,mon,rn
 */
 
 select 
-StockItemID
-,ROW_NUMBER () over ( order by StockItemName) as rn_namesort
+StockItemID, StockItemName
+,ROW_NUMBER () over (PARTITION BY SUBSTRING(StockItemName, 1, 1) order by StockItemName) as rn_namesort
 ,COUNT(StockItemID) over () as countall
 ,COUNT (StockItemID) over (PARTITION BY SUBSTRING(StockItemName, 1, 1) ) as xxx
 ,LEAD (StockItemID,1) over (order by StockItemName) as nextIDforname
 ,LAG (StockItemID,1) over (order by StockItemName) as prevIDforname
 ,CAST (LAG (StockItemName,2,'NO items') over (order by StockItemName) as nvarchar(50)) as next2
-,NTILE (30) over (order by (TypicalWeightPerUnit)) as gr
+,NTILE (30) over (order by TypicalWeightPerUnit) as gr
 from Warehouse.StockItems
 group by StockItemID,StockItemName,TypicalWeightPerUnit
 order by StockItemName
