@@ -117,13 +117,28 @@ order by StockItemName
    В результатах должны быть ид и фамилия сотрудника, ид и название клиента, дата продажи, сумму сделки.
 */
 
-напишите здесь свое решение
+with cte as (
+select SalespersonPersonID, CustomerID,InvoiceDate,InvoiceID, ROW_NUMBER() over (PARTITION BY SalespersonPersonID order by InvoiceDate desc, InvoiceID) as rn from Sales.Invoices)
+select cte.SalespersonPersonID, pep.FullName, cte.CustomerID, cus.CustomerName, cte.InvoiceDate, cust.AmountExcludingTax 
+from cte
+inner join Application.People pep on cte.SalespersonPersonID = pep.PersonID
+inner join Sales.Customers cus on cus.CustomerID = cte.CustomerID
+inner join Sales.CustomerTransactions cust on cust.InvoiceID = cte.InvoiceID
+where rn =1
 
 /*
 6. Выберите по каждому клиенту два самых дорогих товара, которые он покупал.
 В результатах должно быть ид клиета, его название, ид товара, цена, дата покупки.
 */
 
-напишите здесь свое решение
+with cte as (
+select inv.CustomerID, cus.CustomerName, stc.StockItemID, stc.UnitPrice, inv.InvoiceDate, ROW_NUMBER() over (PARTITION BY inv.CustomerID order by stc.UnitPrice desc,invl.InvoiceID desc) as rn from Sales.InvoiceLines invl
+inner join Sales.Invoices inv on inv.InvoiceID = invl.InvoiceID
+inner join Warehouse.StockItems stc on stc.StockItemID = invl.StockItemID
+inner join Sales.Customers cus on cus.CustomerID = inv.CustomerID
+)
+select * from cte
+where rn <=2
+order by CustomerID
 
 Опционально можете для каждого запроса без оконных функций сделать вариант запросов с оконными функциями и сравнить их производительность. 
