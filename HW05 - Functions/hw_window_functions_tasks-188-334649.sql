@@ -61,7 +61,7 @@ order by inv.InvoiceID
 */
 
 select inv.InvoiceID, cus.CustomerName, inv.InvoiceDate, cust.AmountExcludingTax
-,SUM (cust.AmountExcludingTax) OVER ( order by YEAR(InvoiceDate),MONTH(InvoiceDate),inv.InvoiceID) as CumulativeTotalMonth
+,SUM (cust.AmountExcludingTax) OVER ( order by YEAR(InvoiceDate),MONTH(InvoiceDate)) as CumulativeTotalMonth
 from Sales.Invoices inv with (nolock)
 inner join Sales.Customers cus on cus.CustomerID = inv.CustomerID
 inner join Sales.CustomerTransactions cust on cust.InvoiceID = inv.InvoiceID
