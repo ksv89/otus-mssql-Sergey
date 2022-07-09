@@ -139,25 +139,16 @@ exec CB_PriceForCustomer @CastCustomerID = 1
 4) Создайте табличную функцию покажите как ее можно вызвать для каждой строки result set'а без использования цикла. 
 */
 
-CREATE PROCEDURE testcursor 
-	@TestCursor CURSOR VARYING OUTPUT
+CREATE FUNCTION testfunc (@StockItemID AS INT)
+  RETURNS TABLE
 AS
-	SET NOCOUNT ON;
-	SET @TestCursor = CURSOR
-	FORWARD_ONLY STATIC FOR
-		select top 10 StockItemName, StockItemID from Warehouse.StockItems 
-	OPEN @TestCursor;
+RETURN
+  select StockItemName, StockItemID, SupplierID, UnitPrice from Warehouse.StockItems 
+  where StockItemID = @StockItemID
 GO
 
-DECLARE @MyCursor CURSOR;
-EXEC testcursor @TestCursor = @MyCursor OUTPUT;
-WHILE (@@FETCH_STATUS = 0)
-BEGIN;
-	FETCH NEXT FROM @MyCursor;
-END;
-CLOSE @MyCursor;
-DEALLOCATE @MyCursor;
-GO
+select top 10 * from Sales.Orders ord
+	cross apply dbo.testfunc(ord.OrderID) stc
 
 /*
 5) Опционально. Во всех процедурах укажите какой уровень изоляции транзакций вы бы использовали и почему. 
