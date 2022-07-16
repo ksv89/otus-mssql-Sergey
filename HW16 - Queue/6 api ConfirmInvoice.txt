@@ -1,0 +1,34 @@
+USE [WideWorldImporters]
+GO
+
+/****** Object:  StoredProcedure [Sales].[ConfirmInvoice]    Script Date: 16.07.2022 21:55:30 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+
+CREATE PROCEDURE [Sales].[ConfirmInvoice]
+AS
+BEGIN
+	--Receiving Reply Message from the Target.	
+	DECLARE @InitiatorReplyDlgHandle UNIQUEIDENTIFIER,
+			@ReplyReceivedMessage NVARCHAR(1000) 
+	
+	BEGIN TRAN; 
+
+		RECEIVE TOP(1)
+			@InitiatorReplyDlgHandle=Conversation_Handle
+			,@ReplyReceivedMessage=Message_Body
+		FROM dbo.InitiatorQueueWWI; 
+		
+		END CONVERSATION @InitiatorReplyDlgHandle; 
+		
+		SELECT @ReplyReceivedMessage AS ReceivedRepliedMessage; 
+
+	COMMIT TRAN; 
+END
+GO
+
+

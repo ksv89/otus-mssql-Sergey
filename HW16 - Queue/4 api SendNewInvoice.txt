@@ -1,0 +1,54 @@
+USE [WideWorldImporters]
+GO
+
+ Object  StoredProcedure [Sales].[SendNewInvoice]    Script Date 16.07.2022 215223 
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+-- =============================================
+-- Author		Author,,Name
+-- Create date Create Date,,
+-- Description	Description,,
+-- =============================================
+CREATE PROCEDURE [Sales].[SendNewInvoice]
+	@SendID INT
+AS
+BEGIN
+	SET NOCOUNT ON;
+
+    --Sending a Request Message to the Target	
+	DECLARE @InitDlgHandle UNIQUEIDENTIFIER;
+	DECLARE @RequestMessage NVARCHAR(4000);
+	
+	BEGIN TRAN 
+
+	--Prepare the Message
+	SELECT @RequestMessage =	(SELECT SendID,CustID,DateS,DateE
+								FROM dbo.test_mq as mq
+								WHERE SendID = @SendID
+								FOR XML AUTO, root('RequestMessage')); 
+	
+	--Determine the Initiator Service, Target Service and the Contract 
+	BEGIN DIALOG @InitDlgHandle
+	FROM SERVICE
+	[WWISBInitiatorService]
+	TO SERVICE
+	'WWISBTargetService'
+	ON CONTRACT
+	[WWISBContract]
+	WITH ENCRYPTION=OFF; 
+
+	--Send the Message
+	SEND ON CONVERSATION @InitDlgHandle 
+	MESSAGE TYPE
+	[WWISBRequestMessage]
+	(@RequestMessage);
+	--SELECT @RequestMessage AS SentRequestMessage;
+	COMMIT TRAN 
+END
+GO
+
+

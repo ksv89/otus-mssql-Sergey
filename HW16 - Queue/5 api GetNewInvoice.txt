@@ -1,0 +1,81 @@
+USE [WideWorldImporters]
+GO
+
+/****** Object:  StoredProcedure [Sales].[GetNewInvoice]    Script Date: 16.07.2022 21:54:30 ******/
+SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE PROCEDURE [Sales].[GetNewInvoice]
+AS
+BEGIN
+
+	DECLARE @TargetDlgHandle UNIQUEIDENTIFIER,
+			@Message NVARCHAR(4000),
+			@MessageType Sysname,
+			@ReplyMessage NVARCHAR(4000),
+			@ReplyMessageName Sysname,
+			@SendID INT,
+			@CustID INT,
+			@DateS DATE,
+			@DateE DATE,
+			@CounF INT,
+			@xml XML; 
+	
+	BEGIN TRAN; 
+
+	--Receive message from Initiator
+	RECEIVE TOP(1)
+		@TargetDlgHandle = Conversation_Handle,
+		@Message = Message_Body,
+		@MessageType = Message_Type_Name
+	FROM dbo.TargetQueueWWI; 
+
+	SELECT @Message;
+
+	SET @xml = CAST(@Message AS XML);
+
+	SELECT @SendID = R.Iv.value('@SendID','INT'),@CustID = R.Iv.value('@CustID','INT'),@DateS = R.Iv.value('@DateS','DATE'),@DateE = R.Iv.value('@DateE','DATE')
+	FROM @xml.nodes('/RequestMessage/mq') as R(Iv);
+
+	IF EXISTS (SELECT * FROM Sales.Orders WHERE CustomerID = @CustID)
+	BEGIN
+		UPDATE dbo.test_mq
+		SET InvoiceConfirmedForProcessing = GETUTCDATE()
+		WHERE SendID = @SendID;
+
+		UPDATE dbo.test_mq
+		SET CountOrd = (
+		select count(ord.OrderID) from dbo.test_mq as mq
+		inner join Sales.Orders as ord on ord.CustomerID = mq.CustID
+		where mq.SendID = @SendID
+		and ord.OrderDate > @DateS
+		and ord.OrderDate < @DateE
+		group by mq.SendID )
+		WHERE SendID = @SendID;
+
+	END;
+	
+	SELECT @Message AS ReceivedRequestMessage, @MessageType; 
+	
+	-- Confirm and Send a reply
+	IF @MessageType=N'//WWI/SB/RequestMessage'
+	BEGIN
+		SET @ReplyMessage =N'<ReplyMessage> Message received</ReplyMessage>'; 
+	
+		SEND ON CONVERSATION @TargetDlgHandle
+		MESSAGE TYPE
+		[//WWI/SB/ReplyMessage]
+		(@ReplyMessage);
+		END CONVERSATION @TargetDlgHandle;
+	END 
+	
+	SELECT @ReplyMessage AS SentReplyMessage; 
+
+	COMMIT TRAN;
+END
+GO
+
+
