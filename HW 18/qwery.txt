@@ -1,0 +1,26 @@
+;with cte1 as (
+select CustomerID
+	--, SUM(Total.UnitPrice*Total.Quantity) as sumcte
+	FROM Sales.Orders AS ordTotal
+	Join Sales.OrderLines AS Total
+	On ordTotal.OrderID = Total.OrderID
+	GROUP BY CustomerID 
+	having SUM(Total.UnitPrice*Total.Quantity) > 250000
+)
+Select ord.CustomerID, ordl.StockItemID, SUM(ordl.UnitPrice), SUM(ordl.Quantity), COUNT(ordl.OrderID)
+FROM Sales.Orders AS ord
+INNER JOIN Sales.OrderLines AS ordl
+ON ordl.OrderID = ord.OrderID
+INNER JOIN Sales.Invoices AS Inv
+ON Inv.OrderID = ord.OrderID
+INNER JOIN Warehouse.StockItemTransactions AS ItemTrans
+ON ItemTrans.StockItemID = ordl.StockItemID
+INNER JOIN Warehouse.StockItems as It
+on It.StockItemID = ordl.StockItemID
+INNER JOIN cte1 on Inv.CustomerID = cte1.CustomerID
+WHERE Inv.BillToCustomerID != ord.CustomerID
+--and sumcte > 250000
+AND it.SupplierId = 12
+AND DATEDIFF(dd, Inv.InvoiceDate, ord.OrderDate) = 0
+GROUP BY ord.CustomerID, ordl.StockItemID
+ORDER BY ord.CustomerID, ordl.StockItemID
